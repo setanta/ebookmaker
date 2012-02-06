@@ -1,0 +1,24 @@
+makeepub is a Python script that generates a epub file from a
+description file passed through the command line and a bunch of
+HTML files.
+The script generates the boring part of the ePub metadata, e.g.
+the index that appears both in contents.opf, toc.ncx, and also
+in a HTML page.
+All the metadata is given in a dictionary contained in Python
+(NOTE: it's not safe, since the contents file is caused to be
+interpreted in Python, and a malicious person could put an
+import and tell the system to exec an "rm" command. In any case,
+the book description file is very small and you can check it
+before run. Later on I can change it to JSON. Later.)
+
+For the script to generate the indexes (content.opf, toc.ncx,
+and a HTML index, this last one may be hand made, if you want)
+the HTML content must follow a couple of simple rules:
+
+* Use header tags consistently: <h1> for section/chapter,
+  <h2> for subsection, <h3> for subsubsection.
+* Use the "id" attribute to identify the entry in the index.
+
+I thought that true Latin would be nicer than lorem ipsum, so
+I added a real Latin book as an example on how to use the script.
+It is in the "didascalicon" directory.

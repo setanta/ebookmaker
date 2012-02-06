@@ -1,0 +1,363 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import os
+import re
+import sys
+from string import Template
+from zipfile import ZipFile, ZIP_STORED
+
+htmlTocTemplate = Template('''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>$title</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+<body>
+<!-- Generated file, modifying it is futile. -->
+
+<h1>$title</h1>
+$toc
+</body>
+</html>''')
+
+htmlTitleTemplate = Template('''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>$title</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+<body>
+<!-- Generated file, modifying it is futile. -->
+
+<h1>$title</h1>
+
+<p style="height: 20px;">&nbsp;</p>
+
+<h3>$author</h3>
+
+</body>
+</html>''')
+
+
+opfTemplate = Template('''<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="$bookId">
+
+<!-- Generated file, modifying it is futile. -->
+
+<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+    <dc:title>$title</dc:title>
+    <dc:creator $authorOpfFileAs opf:role="aut">$author</dc:creator>
+    <dc:rights>$rights</dc:rights>
+    <dc:identifier id="$bookId" opf:scheme="$idOpfScheme">$idValue</dc:identifier>
+    <dc:publisher>$publisher</dc:publisher>
+    <dc:language>$lang</dc:language>
+    $coverMetaLine
+</metadata>
+
+<manifest>
+    $manifestCoverLine
+$imagesMetaLine
+    <item id="toc" media-type="application/x-dtbncx+xml" href="toc.ncx"/>
+
+$manifestContents
+    <item id="css" href="style.css" media-type="text/css"/>
+</manifest>
+
+<spine toc="toc">
+$spineContents</spine>
+
+$guideSection
+</package>''')
+
+ncxTemplate = Template('''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+
+<!-- Generated file, modifying it is futile. -->
+
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="en-US">
+
+<head>
+<meta name="dtb:uid" content="$bookid"/>
+<meta name="dtb:depth" content="$depth"/>
+<meta name="dtb:totalPageCount" content="0"/>
+<meta name="dtb:maxPageNumber" content="0"/>
+</head>
+
+<docTitle><text>$title</text></docTitle>
+<docAuthor><text>$author</text></docAuthor>
+
+<navMap>
+
+$navpoints
+</navMap>
+
+</ncx>''')
+
+containerXmlContents = '''<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+    <rootfiles>
+        <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+    </rootfiles>
+</container>'''
+
+
+class Indentor:
+
+    def __init__(self, level=0):
+        self.level = level
+
+    def __enter__(self):
+        self.level +=1
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.level -= 1
+        return False
+
+    def indentation(self, adjust=0):
+        return '    ' * (self.level + adjust)
+
+
+class EPubGenerator(object):
+
+    def __init__(self, book, srcDir):
+        self.book = book
+        self.srcDir = srcDir
+        self.epubFile = None
+        if os.path.splitext(self.book['epubfile'])[-1] != '.epub':
+            self.book['epubfile'] += '.epub'
+
+    def run(self):
+        print('Generating ePub file for book "%s".' % self.book['metadata']['title'])
+
+        epubfile = os.path.join(self.srcDir, self.book['epubfile'])
+        self.epubFile = ZipFile(epubfile, 'w')
+
+        # Write mimetype file.
+        self.epubFile.writestr('mimetype', 'application/epub+zip', ZIP_STORED)
+
+        # Write META-INF directory and contents.
+        self.epubFile.writestr(os.path.join('META-INF', 'container.xml'), containerXmlContents, ZIP_STORED)
+
+        generatedFiles = []
+        if self.book['toc']['generate-index-page'] and self.book['toc']['html-toc']:
+            generatedFiles.append(self.book['toc']['html-toc'])
+        if 'title-page' in self.book and self.book['title-page']['generate-title-page']:
+            generatedFiles.append(self.book['title-page']['html-file'])
+
+        self.images = set()
+        for htmlFile in self.book['pre-content']:
+            if htmlFile in generatedFiles:
+                continue
+            self.images.update(self.processImages(htmlFile))
+        self.toc = {}
+        for htmlFile in self.book['content']:
+            self.toc[htmlFile] = self.processHeadings(htmlFile)
+            self.images.update(self.processImages(htmlFile))
+
+        # Add style sheet file.
+        style = os.path.join('OEBPS', 'style.css')
+        self.epubFile.write('style.css', style, ZIP_STORED)
+
+        # Add book cover.
+        if 'cover' in self.book['metadata']:
+            coverFile = os.path.join('OEBPS', self.book['metadata']['cover'])
+            self.epubFile.write(self.book['metadata']['cover'], coverFile)
+
+        # Add images.
+        for image in self.images:
+            imageFile = os.path.join('OEBPS', image)
+            self.epubFile.write(image, imageFile)
+
+        if self.book['toc']['generate-index-page']:
+            self.writeHtmlTocFile()
+
+        if 'title-page' in self.book and self.book['title-page']['generate-title-page']:
+            self.writeHtmlTitlePage()
+
+        # Add content files.
+        for fileName in self.book['pre-content'] + self.book['content']:
+            if fileName in generatedFiles:
+                continue
+            dst = os.path.join('OEBPS', fileName)
+            self.epubFile.write(fileName, dst, ZIP_STORED)
+
+        self.writeOpfFile()
+        self.writeNcxFile()
+
+        self.epubFile.close()
+
+        print('ePub file "%s" successfully generated.' % self.book['epubfile'])
+
+    def processHeadings(self, htmlFile):
+        results = None
+        with open(htmlFile, encoding='utf-8', mode='r') as f:
+            contents = f.read()
+            regex = re.compile('<h(\d+)(?:\s+id=\"(.*)\")?>(.*)</h\d>', re.IGNORECASE|re.MULTILINE|re.UNICODE)
+            results = regex.findall(contents)
+
+        if not results:
+            return False
+
+        contextStack = [(0, None, None, [])]
+        for level, tagId, title in results:
+            level = int(level)
+            if level > self.book['toc']['depth']:
+                continue
+            title = re.sub('<\s*br\s*/\s*>', ' ', title)
+            title = re.sub('<\s*a\s+.*/\s*a\s*>', '', title)
+            item = (level, tagId, title, [])
+            while level <= contextStack[-1][0]:
+                contextStack.pop()
+            contextStack[-1][-1].append(item)
+            contextStack.append(item)
+        return contextStack[0][-1]
+
+    def processImages(self, htmlFile):
+        with open(htmlFile, encoding='utf-8', mode='r') as f:
+            contents = f.read()
+            regex = re.compile('<img.*\s+src=["\'](.*?)["\']', re.IGNORECASE|re.MULTILINE|re.UNICODE)
+            return regex.findall(contents)
+
+    def writeHtmlTocFile(self):
+        indentor = Indentor(-1)
+        def generateSection(fileName, tocItems):
+            tocTxt = ''
+            with indentor as ind:
+                for level, tagId, title, children in tocItems:
+                    url = fileName + '#' + tagId if tagId else fileName
+                    tocTxt += '<p style="text-indent: %dem;"><a href="%s">%s</a></p>\n' % (ind.level, url, title)
+                    if children:
+                        tocTxt += generateSection(fileName, children)
+            return tocTxt
+
+        tocTxt = ''
+        for fileName in self.book['content']:
+            tocTxt += '<div style="margin-top: 1em;">\n'
+            tocTxt += generateSection(fileName, self.toc[fileName])
+            tocTxt += '</div>\n'
+        contents = htmlTocTemplate.substitute(title=self.book['toc']['title'], toc=tocTxt)
+        htmlTocFile = os.path.join('OEBPS', self.book['toc']['html-toc'])
+        self.epubFile.writestr(htmlTocFile, contents, ZIP_STORED)
+
+    def writeHtmlTitlePage(self):
+        contents = htmlTitleTemplate.substitute(title=self.book['metadata']['title'],
+                                              author=self.book['metadata']['author']['value'])
+        htmlTitleFile = os.path.join('OEBPS', self.book['title-page']['html-file'])
+        self.epubFile.writestr(htmlTitleFile, contents, ZIP_STORED)
+
+    def writeOpfFile(self):
+        meta = self.book['metadata']
+        opfDict = {
+            'title' : meta['title'],
+            'author' : meta['author']['value'],
+            'authorOpfFileAs' : '',
+            'rights' : meta['rights'],
+            'bookId' : meta['identifier']['id'],
+            'idOpfScheme' : meta['identifier']['opf:scheme'].upper(),
+            'idValue' : meta['identifier']['value'],
+            'publisher' : meta['publisher'],
+            'lang' : meta['language'],
+            'coverMetaLine' : '',
+            'imagesMetaLine' : '',
+            'manifestCoverLine' : '',
+            'manifestContents' : '',
+            'spineContents' : '',
+            'guideSection' : ''
+        }
+
+        if 'opf:file-as' in meta['author']:
+            opfDict['authorOpfFileAs'] = 'opf:file-as="%s" ' % meta['author']['opf:file-as']
+
+        def getImageLine(image, itemId):
+            _, ext = os.path.splitext(image)
+            mime = ext[1:]
+            if mime == 'jpg':
+                mime = 'jpeg'
+            return '<item id="%s" href="%s" media-type="image/%s"/>\n' % (itemId, image, mime)
+
+        if 'cover' in meta:
+            opfDict['coverMetaLine'] = '<meta name="cover" content="coverimage" />'
+            opfDict['manifestCoverLine'] = getImageLine(meta['cover'], 'coverimage')
+
+        for i, image in enumerate(self.images):
+            opfDict['imagesMetaLine'] += '    ' + getImageLine(image, 'image%d' % i)
+
+        for i, fileName in enumerate(self.book['pre-content'] + self.book['content']):
+            opfDict['manifestContents'] += '    '\
+                    '<item id="item%d" media-type="application/xhtml+xml" href="%s"/>\n' % (i, fileName)
+            opfDict['spineContents'] += '    <itemref idref="item%d"/>\n' % i
+
+        if 'guide' in self.book:
+            opfDict['guideSection'] = '<guide>\n'
+            for ref in self.book['guide']:
+                opfDict['guideSection'] += Template('    '\
+                        '<reference type="$type" title="$title" href="$href"/>\n').substitute(ref)
+            opfDict['guideSection'] += '</guide>\n'
+
+        contents = opfTemplate.substitute(opfDict)
+        opfFile = os.path.join('OEBPS', 'content.opf')
+        self.epubFile.writestr(opfFile, contents, ZIP_STORED)
+
+    def writeNcxFile(self):
+        ncxDict = {
+            'title'     : self.book['metadata']['title'],
+            'author'    : self.book['metadata']['author']['value'],
+            'bookid'    : self.book['metadata']['identifier']['id'],
+            'depth'     : self.book['toc']['depth']
+        }
+
+        indentor = Indentor(-1)
+        self.counter = 0
+
+        def generateSection(fileName, tocItems):
+            nav = ''
+            with indentor as ind:
+                for level, tagId, title, children in tocItems:
+                    self.counter += 1
+                    nav += ind.indentation() + '<navPoint id="nav{0}" playOrder="{0}">\n'.format(self.counter)
+                    url = fileName + '#' + tagId if tagId else fileName
+                    with indentor as ind:
+                        nav += ind.indentation() + '<navLabel><text>%s</text></navLabel>\n' % title
+                        nav += ind.indentation() + '<content src="%s"/>\n' % url
+                    if children:
+                        nav += generateSection(fileName, children)
+                    nav += ind.indentation() + '</navPoint>\n'
+            return nav
+
+        nav = ''
+        for fileName in self.book['content']:
+            nav += generateSection(fileName, self.toc[fileName])
+        ncxDict['navpoints'] = nav
+
+        contents = ncxTemplate.substitute(ncxDict)
+        ncxFile = os.path.join('OEBPS', 'toc.ncx')
+        self.epubFile.writestr(ncxFile, contents, ZIP_STORED)
+
+
+def main(bookFile):
+    epubData = {}
+    with open(bookFile, 'r') as f:
+        exec(f.read(), {}, epubData)
+    if not epubData:
+        print('[%s] Book description file "%s" does not contain any valid data.' % (sys.argv[0], bookFile))
+        sys.exit(1)
+    if not 'book' in epubData:
+        print('[%s] "book" is missing in book description file "%s".' % (sys.argv[0], bookFile))
+        sys.exit(1)
+
+    srcDir = os.path.dirname(bookFile)
+    generator = EPubGenerator(epubData['book'], srcDir)
+    generator.run()
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print('Usage: %s <book-description-file>' % sys.argv[0])
+        sys.exit(1)
+    if not os.path.isfile(sys.argv[1]):
+        print('[%s] Book description file "%s" does not exist or is not a file.' % (sys.argv[0], sys.argv[1]))
+        sys.exit(1)
+    main(sys.argv[1])
