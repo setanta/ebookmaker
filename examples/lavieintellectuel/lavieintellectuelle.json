@@ -1,0 +1,74 @@
+{
+    "filename" : "lavieintellectuelle",
+    "title" : "La vie intellectuelle; son esprit, ses conditions, ses méthodes",
+    "authors" : [
+        {
+            "name" : "A.-D. Sertillanges",
+            "sort" : "Sertillanges, A.-D"
+        }
+    ],
+    "cover" : "images/cover.jpg",
+    "rights" : "(c) Revue des jeunes, 1921 (Voir Considération juridique No. 21 [http://www.inquisition.ca/fr/juridique.htm#s21])",
+    "publisher" : "Éditions de la Revue des jeunes",
+    "language" : "fr",
+    "subjects" : [ "culture" ],
+    "contributors" : [
+        {
+            "name" : "Stefan Jetchick",
+            "role" : "trc"
+        },
+        {
+            "name" : "Anima",
+            "role" : "rev"
+        }
+    ],
+    "identifier" : {
+        "scheme" : "URL",
+        "value" : "http://www.inquisition.ca/fr/livre/sertillanges/vie/vie01_index.htm"
+    },
+    "contents" : [
+        {
+            "type" : "title-page",
+            "source" : "title.html"
+        },
+        {
+            "type" : "copyright-page",
+            "source" : "copyright.html"
+        },
+        {
+            "type" : "toc",
+            "source" : "toc.html"
+        },
+        {
+            "type" : "foreword",
+            "source" : "avant-propos.html"
+        },
+        {
+            "type" : "text",
+            "source" : "chapitre*.html"
+        },
+        {
+            "type" : "notes",
+            "source" : "notes.html"
+        }
+    ],
+    "toc" : {
+        "depth" : 1,
+        "parse" : [ "foreword", "text", "notes" ],
+        "generate" : {
+            "title" : "Table des matières"
+        }
+    },
+    "guide" : [
+        {
+            "type" : "toc",
+            "title" : "Table des matières",
+            "href" : "toc.html"
+        },
+        {
+            "type" : "text",
+            "title" : "Commencent",
+            "href" : "chapitre1.html"
+        }
+    ]
+}

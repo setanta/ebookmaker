@@ -1,0 +1,57 @@
+h1 {
+    text-align: center;
+    font-variant: small-caps;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+h2, h3, h4 {
+    text-align: left;
+    font-variant: small-caps;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+a.noteref {
+    vertical-align: super;
+    position: relative;
+    bottom: 0.5em;
+    font-size: small;
+}
+
+p.note {
+    text-indent: 0px;
+    margin-top: 0.4em;
+    margin-left: 0.2em;
+    font-size: 0.9em;
+}
+
+p.center {
+    text-align: center;
+}
+p.right {
+    text-align: right;
+}
+
+p.comment {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    margin-left: 4em;
+    margin-right: 8em;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+p.noindent {
+    text-indent: 0px;
+}
+
+/*
+div.tocsegment {
+    margin-left: 1em;
+    padding: 0;
+}
+
+div.tocsegment {
+    margin-top: 1em;
+}
+*/

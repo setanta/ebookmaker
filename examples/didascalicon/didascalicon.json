@@ -1,0 +1,61 @@
+{
+    "filename" : "didascalicon",
+    "title" : "Didascalicon",
+    "authors" : [
+        {
+            "name" : "Hugonis de Sancto Victore",
+            "sort" : "de Sancto Victore, Hugonis"
+        }
+    ],
+    "cover" : "images/cover.jpg",
+    "rights" : "Public Domain",
+    "publisher" : "http://freespace.virgin.net/angus.graham/Hugh.htm",
+    "language" : "la",
+    "subjects" : [ "Medieval Arts" ],
+    "contributors" : [
+        {
+            "name" : "Angus Graham",
+            "role" : "oth"
+        }
+    ],
+    "identifier" : {
+        "scheme" : "URL",
+        "value" : "http://freespace.virgin.net/angus.graham/Hugh.htm"
+    },
+    "contents" : [
+        {
+            "type" : "title-page",
+            "source" : "title.html"
+        },
+        {
+            "type" : "toc",
+            "source" : "toc.html"
+        },
+        {
+            "type" : "text",
+            "source" : "de_studio_legendi.html"
+        },
+        {
+            "type" : "text",
+            "source" : "didasc*.html"
+        },
+        {
+            "type" : "text",
+            "source" : "appendix.html"
+        }
+    ],
+    "toc" : {
+        "depth" : 2,
+        "parse" : [ "text" ],
+        "generate" : {
+            "title" : "Index"
+        }
+    },
+    "guide" : [
+        {
+            "type" : "toc",
+            "title" : "Index",
+            "href" : "toc.html"
+        }
+    ]
+}
