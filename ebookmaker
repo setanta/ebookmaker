@@ -9,6 +9,7 @@ from glob import glob
 from string import Template
 from zipfile import ZipFile, ZIP_STORED
 from argparse import ArgumentParser, ArgumentTypeError
+import html
 
 scriptDir, _ = os.path.split(sys.argv[0])
 templateDir = 'opf-templates'
@@ -127,7 +128,7 @@ class OPFGenerator(Generator):
         self.format = ebookFormat
 
     def generateHtmlCover(self):
-        return templates['cover'].substitute(title=self.ebook['title'],
+        return templates['cover'].substitute(title=html.escape(self.ebook['title'], True),
                                              coverimage=self.ebook['cover'])
 
     def generateHtmlTitlePage(self):
