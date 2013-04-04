@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 import sys
+import html
 import json
 from glob import glob
 from string import Template
+from bs4 import BeautifulSoup
 from zipfile import ZipFile, ZIP_STORED
 from argparse import ArgumentParser, ArgumentTypeError
-import html
 
 scriptDir, _ = os.path.split(sys.argv[0])
 templateDir = 'opf-templates'
@@ -64,37 +64,21 @@ class Generator(object):
 
     @staticmethod
     def outlineEBookContents(htmlFile, depth):
-        results = None
         #with open(htmlFile, encoding='utf-8', mode='r') as f:
         with open(htmlFile, mode='r') as f:
-            contents = f.read()
-            regex = re.compile('<h(\d+)(?:\s+id=\"(.*)\")?>(.*)</h\d>',
-                               re.IGNORECASE|re.MULTILINE|re.UNICODE)
-            results = regex.findall(contents)
-        if not results:
-            return False
-
-        contextStack = [(0, None, None, [])]
-        for level, tagId, title in results:
-            level = int(level)
-            if level > depth:
-                continue
-            title = re.sub('<\s*br\s*/\s*>', ' ', title)
-            title = re.sub('<\s*a\s+.*/\s*a\s*>', '', title)
-            item = (level, tagId, title, [])
-            while level <= contextStack[-1][0]:
-                contextStack.pop()
-            contextStack[-1][-1].append(item)
-            contextStack.append(item)
-        return contextStack[0][-1]
+            soup = BeautifulSoup(f.read())
+            hTags = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6')
+            outline = [h for h in soup.body if getattr(h, 'name', None) in hTags and int(h.name[-1]) <= depth]
+            for h in outline:
+                for br in h.findAll('br'):
+                    br.replaceWith(' ')
+            return outline
 
     @staticmethod
     def collectImagesFromEBookContents(htmlFile):
         with open(htmlFile, encoding='utf-8', mode='r') as f:
-            contents = f.read()
-            regex = re.compile('<img.*\s+src=["\'](.*?)["\']',
-                               re.IGNORECASE|re.MULTILINE|re.UNICODE)
-            return regex.findall(contents)
+            soup = BeautifulSoup(f.read())
+            return [img.src for img in soup.body.findAll('img') if img.has_attr('src')]
 
     def initEBookContentsLists(self):
         self.tocList = []
@@ -136,22 +120,13 @@ class OPFGenerator(Generator):
                                              author=self.ebook['authors'][0]['name'])
 
     def generateHtmlToCPage(self):
-        indentor = Indentor(-1)
-        def generateSection(fileName, tocItems):
-            tocTxt = ''
-            with indentor as ind:
-                for level, tagId, title, children in tocItems:
-                    url = fileName + '#' + tagId if tagId else fileName
-                    tocTxt += '<p style="text-indent: %dem;"><a href="%s">%s</a></p>\n' % \
-                              (ind.level, url, title)
-                    if children:
-                        tocTxt += generateSection(fileName, children)
-            return tocTxt
-
         tocTxt = ''
         for fileName in self.tocList:
             tocTxt += '<div style="margin-top: 1em;">\n'
-            tocTxt += generateSection(fileName, self.outline[fileName])
+            for hTag in self.outline[fileName]:
+                url = fileName + '#' + hTag.get('id') if hTag.has_attr('id') else fileName
+                tocTxt += '<p style="text-indent: %dem;"><a href="%s">%s</a></p>\n' % \
+                            (int(hTag.name[-1]), url, hTag.text)
             tocTxt += '</div>\n'
 
         tocTitle = self.ebook['toc']['generate']['title']
@@ -167,28 +142,34 @@ class OPFGenerator(Generator):
         indentor = Indentor(-1)
         global counter
         counter = 0
-        def generateSection(fileName, tocItems):
+        def generateSection(fileName, tocItems, level):
             global counter
             nav = ''
             with indentor as ind:
-                for level, tagId, title, children in tocItems:
+                for index, hTag in enumerate(tocItems):
+                    hLevel = int(hTag.name[-1])
+                    if hLevel < level:
+                        return
                     counter += 1
                     nav += ind.indentation()
                     nav += '<navPoint id="nav{0}" playOrder="{0}">\n'.format(counter)
-                    url = fileName + '#' + tagId if tagId else fileName
+                    url = fileName + '#' + hTag.get('id') if hTag.has_attr('id') else fileName
                     with indentor as ind:
                         nav += ind.indentation()
-                        nav += '<navLabel><text>%s</text></navLabel>\n' % title
+                        nav += '<navLabel><text>%s</text></navLabel>\n' % hTag.text
                         nav += ind.indentation()
                         nav += '<content src="%s"/>\n' % url
-                    if children:
-                        nav += generateSection(fileName, children)
+                    if index + 1 < len(tocItems):
+                        nextHTag = tocItems[index + 1]
+                        nextHLevel = int(nextHTag.name[-1])
+                        if nextHLevel > level:
+                            nav += generateSection(fileName, tocItems[index + 1:], nextHLevel)
                     nav += ind.indentation() + '</navPoint>\n'
             return nav
 
         nav = ''
         for fileName in self.tocList:
-            nav += generateSection(fileName, self.outline[fileName])
+            nav += generateSection(fileName, self.outline[fileName], 1)
         ncxDict['navpoints'] = nav
         return templates['ncx'].substitute(ncxDict)
 
