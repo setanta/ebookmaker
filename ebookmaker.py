@@ -41,7 +41,6 @@ class Indentor:
 class Generator(object):
     def __init__(self, ebookData):
         self.ebook = ebookData
-        self.format = None
         self.baseDir = os.path.dirname(self.ebook['filename'])
 
         self.initEBookContentsLists()
@@ -85,12 +84,7 @@ class Generator(object):
             if i['type'] in self.ebook['toc']['parse']:
                 self.tocList.append(item)
 
-    def saveEBook(self):
-        print('Generating %s file for eBook "%s".' % (self.format, self.ebook['title']))
-        self.createEBookFile()
-        print('%s file "%s" successfully generated.' % (self.format, self.ebook['filename']))
-
-    def createEBookFile(self):
+    def createEBookFile(self, ebookFile=None):
         raise NotImplementedError
 
 
@@ -105,9 +99,8 @@ class OPFGenerator(Generator):
 </container>
 '''.strip()
 
-    def __init__(self, ebookData, ebookFormat):
+    def __init__(self, ebookData):
         Generator.__init__(self, ebookData)
-        self.format = ebookFormat
 
     def generateHtmlCover(self):
         return templates['cover'].substitute(title=html.escape(self.ebook['title'], True),
@@ -225,10 +218,12 @@ class OPFGenerator(Generator):
 
         return templates['opf'].substitute(opfDict)
 
-    def createEBookFile(self):
-        ebookFile = '%s.%s' % \
-            (os.path.join(self.baseDir, self.ebook['filename']),
-             self.format.lower())
+    def createEBookFile(self, ebookFile=None):
+        if not ebookFile:
+            ebookFile = '%s.epub' % os.path.join(self.baseDir, self.ebook['filename'])
+
+        print('Generating ePub file for eBook "%s".' % self.ebook['title'])
+
         epubFile = ZipFile(ebookFile, 'w')
 
         # Write mimetype file.
@@ -261,7 +256,7 @@ class OPFGenerator(Generator):
                 epubFile.write(fileName, dstFile, ZIP_STORED)
                 continue
 
-            if item['type'] == 'cover' and self.format == 'epub':
+            if item['type'] == 'cover':
                 dstFilename = os.path.join('OEBPS', fileName)
                 dstContents = self.generateHtmlCover()
             elif item['type'] == 'toc':
@@ -283,6 +278,8 @@ class OPFGenerator(Generator):
         epubFile.writestr(ncxFile, self.generateNcx(), ZIP_STORED)
 
         epubFile.close()
+
+        print('ePub file "%s" successfully generated.' % ebookFile)
 
 
 def parseEBookFile(ebookFile):
@@ -333,9 +330,6 @@ def parseEBookFile(ebookFile):
 
 def main():
     parser = ArgumentParser(description='Generates ebooks from a description file.')
-    parser.add_argument('-f', '--format', type=str, default='epub',
-                        choices=['epub', 'mobi'],
-                        help='Format of the output (default: epub).')
     parser.add_argument('-o', '--output', type=str,
                         help='Name of the output file.')
     parser.add_argument('ebookData', type=parseEBookFile,
@@ -343,8 +337,8 @@ def main():
 
     args = vars(parser.parse_args())
 
-    gen = OPFGenerator(args['ebookData'], args['format'])
-    gen.saveEBook()
+    gen = OPFGenerator(args['ebookData'])
+    gen.createEBookFile(args['output'])
 
 if __name__ == '__main__':
     main()

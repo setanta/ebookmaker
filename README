@@ -22,7 +22,7 @@ build ePub files:
 
 Here's the complete help:
 
-  Usage: ebookmaker [-h] [-f {epub,mobi}] [-o OUTPUT] ebookData
+  Usage: ebookmaker [-h] [-o OUTPUT] ebookData
 
   Generates ebooks from a description file.
 
@@ -31,8 +31,6 @@ Here's the complete help:
 
   optional arguments:
     -h, --help            show this help message and exit
-    -f {epub,mobi}, --format {epub,mobi}
-                          Format of the output (default: epub).
     -o OUTPUT, --output OUTPUT
                           Name of the output file.
 
