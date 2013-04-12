@@ -1,0 +1,53 @@
+{
+    "filename" : "iliada",
+    "title" : "Ilíada",
+    "authors" : [
+        {
+            "name" : "Homero",
+            "sort" : "Homero"
+        }
+    ],
+    "cover" : "capa.jpg",
+    "rights" : "Public Domain",
+    "publisher" : "http://iliadaemportugues.blogspot.com/",
+    "language" : "pt",
+    "subjects" : [ "Poesia", "Poesia épica", "Literatura grega clássica" ],
+    "contributors" : [
+        {
+            "name" : "Carlos Alberto Nunes",
+            "role" : "trl"
+        }
+    ],
+    "identifier" : {
+        "scheme" : "URL",
+        "value" : "http://iliadaemportugues.blogspot.com/"
+    },
+    "contents" : [
+        {
+            "type" : "title-page",
+            "source" : "titulo.html"
+        },
+        {
+            "type" : "toc",
+            "source" : "indice.html"
+        },
+        {
+            "type" : "text",
+            "source" : "rapsodia-*.html"
+        }
+    ],
+    "toc" : {
+        "depth" : 1,
+        "parse" : [ "text" ],
+        "generate" : {
+            "title" : "Índice"
+        }
+    },
+    "guide" : [
+        {
+            "type" : "toc",
+            "title" : "Índice",
+            "href" : "indice.html"
+        }
+    ]
+}

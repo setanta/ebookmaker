@@ -1,0 +1,17 @@
+h1, h2, h3 {
+    text-align: center;
+    font-variant: small-caps;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+p {
+    margin: 0;
+    padding-left: 2.5em;
+    text-indent: -2.5em;
+}
+span.number {
+    vertical-align: super;
+    position: relative;
+    bottom: 0.5em;
+    font-size: small;
+}

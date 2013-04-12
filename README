@@ -20,6 +20,11 @@ build ePub files:
 
   python3 ../../ebookmaker BOOK.json
 
+The 'recipes' directory is also interesting, there you'll find
+Python scripts that download content not available in ebook format,
+but as HTML, format it and calls on ebookmaker to assembly in a
+nice ebook.
+
 Here's the complete help:
 
   Usage: ebookmaker [-h] [-o OUTPUT] ebookData
