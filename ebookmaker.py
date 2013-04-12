@@ -63,8 +63,7 @@ class Generator(object):
 
     @staticmethod
     def outlineEBookContents(htmlFile, depth):
-        #with open(htmlFile, encoding='utf-8', mode='r') as f:
-        with open(htmlFile, mode='r') as f:
+        with open(htmlFile, encoding='utf-8', mode='r') as f:
             soup = BeautifulSoup(f.read())
             hTags = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6')
             outline = [h for h in soup.body if getattr(h, 'name', None) in hTags and int(h.name[-1]) <= depth]
