@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import html
 import json
 from glob import glob
@@ -11,7 +10,7 @@ from bs4 import BeautifulSoup
 from zipfile import ZipFile, ZIP_STORED
 from argparse import ArgumentParser, ArgumentTypeError
 
-scriptDir, _ = os.path.split(sys.argv[0])
+scriptDir, _ = os.path.split(os.path.realpath(__file__))
 templateDir = 'opf-templates'
 
 def loadTemplate(templateFile):
