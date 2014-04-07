@@ -51,28 +51,29 @@ class Generator(object):
             if not item['type'] in self.ebook['toc']['parse']:
                 continue
             fname = item['source']
-            self.outline[fname] = Generator.outlineEBookContents(fname, depth)
+            self.outline[fname] = self.outlineEBookContents(fname, depth)
 
         images = set()
         for item in self.ebook['contents']:
             if item['generate']:
                 continue
-            images.update(Generator.collectImagesFromEBookContents(item['source']))
+            images.update(self.collectImagesFromEBookContents(item['source']))
         self.images = sorted(list(images))
 
-    @staticmethod
-    def outlineEBookContents(htmlFile, depth):
+    def outlineEBookContents(self, htmlFile, depth):
         with open(htmlFile, encoding='utf-8', mode='r') as f:
             soup = BeautifulSoup(f.read())
             hTags = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6')
             outline = [h for h in soup.body if getattr(h, 'name', None) in hTags and int(h.name[-1]) <= depth]
             for h in outline:
                 for br in h.findAll('br'):
-                    br.replaceWith(' ')
+                    lineBreakReplacement = ' '
+                    if 'replaceLineBreakWith' in self.ebook['toc']['generate']:
+                        lineBreakReplacement = self.ebook['toc']['generate']['replaceLineBreakWith']
+                    br.replaceWith(lineBreakReplacement)
             return outline
 
-    @staticmethod
-    def collectImagesFromEBookContents(htmlFile):
+    def collectImagesFromEBookContents(self, htmlFile):
         with open(htmlFile, encoding='utf-8', mode='r') as f:
             soup = BeautifulSoup(f.read())
             return [img.src for img in soup.body.findAll('img') if img.has_attr('src')]
