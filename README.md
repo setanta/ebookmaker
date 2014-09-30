@@ -7,6 +7,10 @@ The script generates the boring part of the eBook metadata, e.g.
 the index that appears both in contents.opf, toc.ncx, and
 in a HTML page.
 
+The script depends on the 
+[beautifulsoup4](https://pypi.python.org/pypi/beautifulsoup4/4.3.2)
+package.
+
 To allow the script to generate the various tables of contents
 (content.opf, toc.ncx, and the HTML index; although this last one
 may be hand made, if you want) the HTML content must follow a couple
