@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
@@ -76,7 +76,8 @@ class Generator(object):
     def collectImagesFromEBookContents(self, htmlFile):
         with open(htmlFile, encoding='utf-8', mode='r') as f:
             soup = BeautifulSoup(f.read())
-            return [img.src for img in soup.body.findAll('img') if img.has_attr('src')]
+            x = [img['src'] for img in soup.body.findAll('img') if img.has_attr('src')]
+            return x
 
     def initEBookContentsLists(self):
         self.tocList = []
